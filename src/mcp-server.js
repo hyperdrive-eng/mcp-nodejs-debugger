@@ -6,27 +6,27 @@ import fetch from 'node-fetch';
 
 // Create an MCP server
 const server = new McpServer({
-  name: "Inspector",
-  version: "1.0.0",
-  description: `Node.js debugger that allows setting breakpoints and inspecting variables.
-  	When using debugging capabilities, always instruct the user to navigate to their 
-	website after setting breakpoints. Breakpoints will only be triggered when the user 
-	interacts with their website in a way that causes the code at the breakpoint location to execute.
-	When user requests debugging, always use the following format:
-	1. Set breakpoint
-	2. Wait for user to navigate to their website and trigger breakpoint
-	3. Inspect variables
-	4. Execute code
-	5. Step over
-	6. Step into
-	7. Step out
-	8. Continue execution
-	9. Delete breakpoint
-	10. List breakpoints
-	11. Get current location
-	12. Evaluate expression
-	13. Get script source
-	14. Get properties`
+  name: "NodeJS Debugger",
+  version: "0.2.0",
+  description: `Advanced Node.js debugger for runtime analysis and troubleshooting. This tool connects to Node.js's built-in Inspector Protocol to provide powerful debugging capabilities directly through Claude Code.
+
+    DEBUGGING STRATEGY:
+    Use debugger for the following:
+    - When you need to understand the runtime state of the application
+    - When you need to test potential fixes for the application
+    - When you need to explore the codebase to find the root cause of an issue
+
+
+    IMPORTANT NOTES:
+    - ALWAYS assume the user has already started their Node.js application in debug mode.
+    - If connection issues occur, suggest using retry_connect tool instead of restarting the server
+    - Don't try to start the debugger or the node server yourself.
+    - Always ask the user to trigger breakpoints manually, give them specific instructions on how to do so.
+    - When user interaction is required, provide EXTREMELY specific instructions
+    - Take initiative to explore the runtime state thoroughly when breakpoint is hit
+    - Keep breakpoints active until issue is fully resolved, then clean up using delete_breakpoint
+    - Set multiple strategic breakpoints at once to capture the full execution path leading to an error.
+    - NEVER use fetch() as it will break the debugging connection.`
 });
 
 class Inspector {
