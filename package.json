@@ -1,6 +1,6 @@
 {
   "name": "mcp-nodejs-debugger",
-  "version": "0.1.0-beta.5",
+  "version": "0.1.0-beta.8",
   "description": "An MCP server to debug Node.js at runtime",
   "main": "index.js",
   "bin": "./index.js",
@@ -37,10 +37,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hyperdrive-eng/mcp-debugger"
+    "url": "https://github.com/hyperdrive-eng/mcp-nodejs-debugger"
   },
   "bugs": {
-    "url": "https://github.com/hyperdrive-eng/mcp-debugger/issues"
+    "url": "https://github.com/hyperdrive-eng/mcp-nodejs-debugger/issues"
   },
   "homepage": "https://hyperdrive.engineering"
 }
