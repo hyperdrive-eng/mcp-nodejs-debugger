@@ -10,94 +10,23 @@ const server = new McpServer({
   version: "1.0.0",
   description: `Advanced Node.js debugger for runtime analysis and troubleshooting. This tool connects to Node.js's built-in Inspector Protocol to provide powerful debugging capabilities directly through Claude Code.
 
-CAPABILITIES:
-- Set breakpoints at specific file locations
-- Capture and analyze variables and objects in real-time
-- Evaluate JavaScript code in the context of the running application
-- Track and inspect console output from target application
-- Control execution flow (step over, step into, step out, continue)
-- View call stacks and execution context
-- Examine detailed object properties
+    DEBUGGING STRATEGY:
+    Use debugger for the following:
+    - When you need to understand the runtime state of the application
+    - When you need to test potential fixes for the application
+    - When you need to explore the codebase to find the root cause of an issue
 
-SAFE HTTP REQUEST EXAMPLE:
-When you need to trigger a route programmatically to hit a breakpoint, use this pattern:
 
-// GOOD: Use http module with callbacks (this preserves the debugging connection)
-const http = require('http');
-http.get('http://localhost:3000/your-route', res => {
-  console.log('Request made, status:', res.statusCode);
-  let data = '';
-  res.on('data', chunk => { data += chunk; });
-  res.on('end', () => { console.log('Response:', data); });
-}).on('error', e => console.error('Error:', e));
-
-// BAD: Never use fetch() as it will break the debugging connection
-// fetch('http://localhost:3000/your-route') ❌ WILL CAUSE DISCONNECTION
-
-REQUIREMENTS:
-- Target Node.js application must be running with the --inspect flag: node --inspect yourapp.js
-- Debugger will automatically connect to the default port (9229)
-- Custom ports can be specified using the retry_connect tool
-
-IMPORTANT NOTE FOR CLAUDE CODE:
-- ALWAYS assume the user has already started their Node.js application in debug mode
-- NEVER instruct the user to run their Node.js server with the --inspect flag
-- If connection issues occur, suggest using retry_connect tool instead of restarting the server
-
-PROACTIVE DEBUGGING STRATEGY:
-When troubleshooting issues, follow this optimized debugging workflow:
-
-1. ANALYZE THE PROBLEM:
-   - Ask user for error messages and expected behavior
-   - Search the codebase to locate relevant files using grep/glob
-   - Understand the execution flow that leads to the error
-
-2. SET BREAKPOINTS STRATEGICALLY:
-   - Place breakpoints at key locations using set_breakpoint
-   - Put breakpoints BEFORE the error occurs to capture the state
-   - Consider breakpoints at: initialization, key function entries, error-prone conditions
-
-3. TRIGGER THE CODE EXECUTION:
-   - CAUTION: NEVER use fetch() inside nodejs_inspect as this will interrupt the WebSocket debug connection
-   - PREFERRED METHOD #1: Provide Claude Code with EXACT curl commands to run in their terminal and execute with bash: curl http://localhost:3000/route
-   - PREFERRED METHOD #2: If HTTP requests must be made programmatically, use http module with callbacks:
-     
-     const http = require('http');
-     http.get('http://localhost:3000/route', res => { 
-       console.log('Response status:', res.statusCode);
-       // Handle response here
-     }).on('error', e => console.error(e));
-     
-   - ALTERNATIVE: Have user navigate to the specific route/URL in their browser while debugger is active
-   - ALWAYS provide clear instructions on exactly what will trigger the breakpoint and how to confirm it's working
-
-4. CAPTURE RUNTIME STATE:
-   - When breakpoint hits, immediately use inspect_variables to examine the state
-   - Check get_console_output to see application logs
-   - Retrieve call stack with get_location
-   - Use evaluate to test hypotheses about variable state
-
-5. NAVIGATE EXECUTION:
-   - Use step_over, step_into, step_out to analyze control flow
-   - Use continue to resume until next breakpoint
-   - Keep the user informed about what's happening at each step
-
-6. RESOLVE AND VERIFY:
-   - Formulate a solution based on runtime analysis
-   - Use evaluate or nodejs_inspect to test potential fixes
-   - Have user implement the final solution
-   - Verify fix works by re-running the code with breakpoints
-
-IMPORTANT NOTES:
-- Always try to trigger breakpoints programmatically before asking user to take action
-- When user interaction is required, provide EXTREMELY specific instructions
-- Take initiative to explore the runtime state thoroughly when breakpoint is hit
-- Keep breakpoints active until issue is fully resolved, then clean up using delete_breakpoint
-- For performance issues, use evaluate with timing code to measure execution time
-- For memory issues, inspect object properties to identify potential memory leaks
-- When security issues are suspected, inspect authentication and data validation code paths
-
-OPTIMIZATION TIP: Set multiple strategic breakpoints at once to capture the full execution path leading to an error.`
+    IMPORTANT NOTES:
+    - ALWAYS assume the user has already started their Node.js application in debug mode. 
+    - If connection issues occur, suggest using retry_connect tool instead of restarting the server
+    - Don't try to start the debugger or the node server yourself.
+    - Always ask the user to trigger breakpoints manually, give them specific instructions on how to do so.
+    - When user interaction is required, provide EXTREMELY specific instructions
+    - Take initiative to explore the runtime state thoroughly when breakpoint is hit
+    - Keep breakpoints active until issue is fully resolved, then clean up using delete_breakpoint
+    - Set multiple strategic breakpoints at once to capture the full execution path leading to an error.
+    - NEVER use fetch() as it will break the debugging connection.`
 });
 
 class Inspector {
@@ -422,148 +351,148 @@ const inspector = new Inspector(9229, {
 inspector.consoleOutput = [];
 
 // Execute JavaScript code
-server.tool(
-  "nodejs_inspect",
-  "Executes custom JavaScript code directly in the context of the running Node.js application. CRITICAL for proactive debugging: use this to trigger code paths that would hit breakpoints, simulate user actions, inject test data, modify runtime behavior, or extract detailed state information. WARNING: DO NOT use fetch() or similar browser APIs as they will interrupt the WebSocket debugging connection! Instead, use the native http module with callbacks (http.get/http.request) when making HTTP requests programmatically.",
-  {
-    js_code: z.string().describe("JavaScript code to execute in the context of the running application. Can include any valid JS including async/await, multiple statements, object creation, and function calls. For HTTP requests, use http.get() with callbacks instead of fetch().")
-  },
-  async ({ js_code }) => {
-    try {
-      // Ensure debugger is enabled
-      if (!inspector.debuggerEnabled) {
-        await inspector.enableDebugger();
-      }
+// server.tool(
+//   "nodejs_inspect",
+//   "Executes custom JavaScript code directly in the context of the running Node.js application. CRITICAL for proactive debugging: use this to trigger code paths that would hit breakpoints, simulate user actions, inject test data, modify runtime behavior, or extract detailed state information. WARNING: DO NOT use fetch() or similar browser APIs as they will interrupt the WebSocket debugging connection! Instead, use the native http module with callbacks (http.get/http.request) when making HTTP requests programmatically.",
+//   {
+//     js_code: z.string().describe("JavaScript code to execute in the context of the running application. Can include any valid JS including async/await, multiple statements, object creation, and function calls. For HTTP requests, use http.get() with callbacks instead of fetch().")
+//   },
+//   async ({ js_code }) => {
+//     try {
+//       // Ensure debugger is enabled
+//       if (!inspector.debuggerEnabled) {
+//         await inspector.enableDebugger();
+//       }
       
-      // Capture the current console output length to know where to start capturing new output
-      const consoleStartIndex = inspector.consoleOutput.length;
+//       // Capture the current console output length to know where to start capturing new output
+//       const consoleStartIndex = inspector.consoleOutput.length;
       
-      // Wrap the code in a try-catch with explicit console logging for errors
-      let codeToExecute = `
-        try {
-          ${js_code}
-        } catch (e) {
-          console.error('Execution error:', e);
-          e;  // Return the error
-        }
-      `;
+//       // Wrap the code in a try-catch with explicit console logging for errors
+//       let codeToExecute = `
+//         try {
+//           ${js_code}
+//         } catch (e) {
+//           console.error('Execution error:', e);
+//           e;  // Return the error
+//         }
+//       `;
       
-      const response = await inspector.send('Runtime.evaluate', {
-        expression: codeToExecute,
-        contextId: 1,
-        objectGroup: 'console',
-        includeCommandLineAPI: true,
-        silent: false,
-        returnByValue: true,
-        generatePreview: true,
-        awaitPromise: true  // This will wait for promises to resolve
-      });
+//       const response = await inspector.send('Runtime.evaluate', {
+//         expression: codeToExecute,
+//         contextId: 1,
+//         objectGroup: 'console',
+//         includeCommandLineAPI: true,
+//         silent: false,
+//         returnByValue: true,
+//         generatePreview: true,
+//         awaitPromise: true  // This will wait for promises to resolve
+//       });
       
-      // Give some time for console logs to be processed
-      await new Promise(resolve => setTimeout(resolve, 200));
+//       // Give some time for console logs to be processed
+//       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Get any console output that was generated during execution
-      const consoleOutputs = inspector.consoleOutput.slice(consoleStartIndex);
-      const consoleText = consoleOutputs.map(output => 
-        `[${output.type}] ${output.message}`
-      ).join('\n');
+//       // Get any console output that was generated during execution
+//       const consoleOutputs = inspector.consoleOutput.slice(consoleStartIndex);
+//       const consoleText = consoleOutputs.map(output => 
+//         `[${output.type}] ${output.message}`
+//       ).join('\n');
       
-      // Process the return value
-      let result;
-      if (response.result) {
-        if (response.result.type === 'object') {
-          if (response.result.value) {
-            // If we have a value, use it
-            result = response.result.value;
-          } else if (response.result.objectId) {
-            // If we have an objectId but no value, the object was too complex to serialize directly
-            // Get more details about the object
-            try {
-              const objectProps = await inspector.getProperties(response.result.objectId);
-              const formattedObject = {};
+//       // Process the return value
+//       let result;
+//       if (response.result) {
+//         if (response.result.type === 'object') {
+//           if (response.result.value) {
+//             // If we have a value, use it
+//             result = response.result.value;
+//           } else if (response.result.objectId) {
+//             // If we have an objectId but no value, the object was too complex to serialize directly
+//             // Get more details about the object
+//             try {
+//               const objectProps = await inspector.getProperties(response.result.objectId);
+//               const formattedObject = {};
               
-              for (const prop of objectProps.result) {
-                if (prop.value) {
-                  if (prop.value.type === 'object' && prop.value.subtype !== 'null') {
-                    // For nested objects, try to get their details too
-                    if (prop.value.objectId) {
-                      try {
-                        const nestedProps = await inspector.getProperties(prop.value.objectId);
-                        const nestedObj = {};
-                        for (const nestedProp of nestedProps.result) {
-                          if (nestedProp.value) {
-                            if (nestedProp.value.value !== undefined) {
-                              nestedObj[nestedProp.name] = nestedProp.value.value;
-                            } else {
-                              nestedObj[nestedProp.name] = nestedProp.value.description || 
-                                `[${nestedProp.value.subtype || nestedProp.value.type}]`;
-                            }
-                          }
-                        }
-                        formattedObject[prop.name] = nestedObj;
-                      } catch (nestedErr) {
-                        formattedObject[prop.name] = prop.value.description || 
-                          `[${prop.value.subtype || prop.value.type}]`;
-                      }
-                    } else {
-                      formattedObject[prop.name] = prop.value.description || 
-                        `[${prop.value.subtype || prop.value.type}]`;
-                    }
-                  } else if (prop.value.type === 'function') {
-                    formattedObject[prop.name] = '[function]';
-                  } else if (prop.value.value !== undefined) {
-                    formattedObject[prop.name] = prop.value.value;
-                  } else {
-                    formattedObject[prop.name] = `[${prop.value.type}]`;
-                  }
-                }
-              }
+//               for (const prop of objectProps.result) {
+//                 if (prop.value) {
+//                   if (prop.value.type === 'object' && prop.value.subtype !== 'null') {
+//                     // For nested objects, try to get their details too
+//                     if (prop.value.objectId) {
+//                       try {
+//                         const nestedProps = await inspector.getProperties(prop.value.objectId);
+//                         const nestedObj = {};
+//                         for (const nestedProp of nestedProps.result) {
+//                           if (nestedProp.value) {
+//                             if (nestedProp.value.value !== undefined) {
+//                               nestedObj[nestedProp.name] = nestedProp.value.value;
+//                             } else {
+//                               nestedObj[nestedProp.name] = nestedProp.value.description || 
+//                                 `[${nestedProp.value.subtype || nestedProp.value.type}]`;
+//                             }
+//                           }
+//                         }
+//                         formattedObject[prop.name] = nestedObj;
+//                       } catch (nestedErr) {
+//                         formattedObject[prop.name] = prop.value.description || 
+//                           `[${prop.value.subtype || prop.value.type}]`;
+//                       }
+//                     } else {
+//                       formattedObject[prop.name] = prop.value.description || 
+//                         `[${prop.value.subtype || prop.value.type}]`;
+//                     }
+//                   } else if (prop.value.type === 'function') {
+//                     formattedObject[prop.name] = '[function]';
+//                   } else if (prop.value.value !== undefined) {
+//                     formattedObject[prop.name] = prop.value.value;
+//                   } else {
+//                     formattedObject[prop.name] = `[${prop.value.type}]`;
+//                   }
+//                 }
+//               }
               
-              result = formattedObject;
-            } catch (propErr) {
-              // If we can't get properties, at least show the object description
-              result = response.result.description || `[${response.result.subtype || response.result.type}]`;
-            }
-          } else {
-            // Fallback for objects without value or objectId
-            result = response.result.description || `[${response.result.subtype || response.result.type}]`;
-          }
-        } else if (response.result.type === 'undefined') {
-          result = undefined;
-        } else if (response.result.value !== undefined) {
-          result = response.result.value;
-        } else {
-          result = `[${response.result.type}]`;
-        }
-      }
+//               result = formattedObject;
+//             } catch (propErr) {
+//               // If we can't get properties, at least show the object description
+//               result = response.result.description || `[${response.result.subtype || response.result.type}]`;
+//             }
+//           } else {
+//             // Fallback for objects without value or objectId
+//             result = response.result.description || `[${response.result.subtype || response.result.type}]`;
+//           }
+//         } else if (response.result.type === 'undefined') {
+//           result = undefined;
+//         } else if (response.result.value !== undefined) {
+//           result = response.result.value;
+//         } else {
+//           result = `[${response.result.type}]`;
+//         }
+//       }
       
-      let responseContent = [];
+//       let responseContent = [];
       
-      // Add console output if there was any
-      if (consoleText.length > 0) {
-        responseContent.push({
-          type: "text", 
-          text: `Console output:\n${consoleText}`
-        });
-      }
+//       // Add console output if there was any
+//       if (consoleText.length > 0) {
+//         responseContent.push({
+//           type: "text", 
+//           text: `Console output:\n${consoleText}`
+//         });
+//       }
       
-      // Add the result
-      responseContent.push({
-        type: "text",
-        text: `Code executed successfully. Result: ${JSON.stringify(result, null, 2)}`
-      });
+//       // Add the result
+//       responseContent.push({
+//         type: "text",
+//         text: `Code executed successfully. Result: ${JSON.stringify(result, null, 2)}`
+//       });
       
-      return { content: responseContent };
-    } catch (err) {
-      return {
-        content: [{
-          type: "text",
-          text: `Error executing code: ${err.message}`
-        }]
-      };
-    }
-  }
-);
+//       return { content: responseContent };
+//     } catch (err) {
+//       return {
+//         content: [{
+//           type: "text",
+//           text: `Error executing code: ${err.message}`
+//         }]
+//       };
+//     }
+//   }
+// );
 
 // Set breakpoint tool
 server.tool(
