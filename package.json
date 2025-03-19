@@ -1,6 +1,6 @@
 {
   "name": "@hyperdrive-eng/mcp-nodejs-debugger",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An MCP server to debug Node.js at runtime",
   "main": "index.js",
   "bin": "./index.js",
