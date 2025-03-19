@@ -30,7 +30,7 @@ const server = new McpServer({
 });
 
 class Inspector {
-	constructor(port = 9229, retryOptions = { maxRetries: 5, retryInterval: 1000 }) {
+	constructor(port = 9229, retryOptions = { maxRetries: 5, retryInterval: 1000, continuousRetry: true }) {
 		this.port = port;
 		this.connected = false;
 		this.pendingRequests = new Map();
@@ -41,6 +41,7 @@ class Inspector {
 		this.retryOptions = retryOptions;
 		this.retryCount = 0;
 		this.callbackHandlers = new Map();
+		this.continuousRetryEnabled = retryOptions.continuousRetry;
 		this.initialize();
 	}
 
@@ -107,10 +108,26 @@ class Inspector {
 	}
 	
 	scheduleRetry() {
-		if (this.retryCount < this.retryOptions.maxRetries) {
+		// If continuous retry is enabled, we'll keep trying after the initial attempts
+		if (this.retryCount < this.retryOptions.maxRetries || this.continuousRetryEnabled) {
 			this.retryCount++;
-			console.log(`Retrying connection (${this.retryCount}/${this.retryOptions.maxRetries})...`);
-			setTimeout(() => this.initialize(), this.retryOptions.retryInterval);
+			
+			// If we're in continuous retry mode and have exceeded the initial retry count
+			if (this.continuousRetryEnabled && this.retryCount > this.retryOptions.maxRetries) {
+				// Only log every 10 attempts to avoid flooding the console
+				if (this.retryCount % 10 === 0) {
+					console.log(`Waiting for debugger connection... (retry ${this.retryCount})`);
+				}
+			} else {
+				console.log(`Retrying connection (${this.retryCount}/${this.retryOptions.maxRetries})...`);
+			}
+			
+			// Use a longer interval for continuous retries to reduce resource usage
+			const interval = this.continuousRetryEnabled && this.retryCount > this.retryOptions.maxRetries
+				? Math.min(this.retryOptions.retryInterval * 5, 10000) // Max 10 seconds between retries
+				: this.retryOptions.retryInterval;
+				
+			setTimeout(() => this.initialize(), interval);
 		} else {
 			console.error(`Failed to connect after ${this.retryOptions.maxRetries} attempts`);
 		}
@@ -323,8 +340,12 @@ class Inspector {
 	}
 }
 
-// Create the inspector instance
-const inspector = new Inspector(9229);
+// Create the inspector instance with continuous retry enabled
+const inspector = new Inspector(9229, { 
+  maxRetries: 5, 
+  retryInterval: 1000, 
+  continuousRetry: true 
+});
 
 // Initialize console output storage
 inspector.consoleOutput = [];
@@ -1126,8 +1147,53 @@ server.tool(
   }
 );
 
+// Add a tool for manually retrying connection to the Node.js debugger
+server.tool(
+  "retry_connect",
+  "Manually triggers a reconnection attempt to the Node.js debugger",
+  {
+    port: z.number().optional().describe("Optional port to connect to. Defaults to current port (9229)")
+  },
+  async ({ port }) => {
+    try {
+      // If a new port is specified, update the inspector's port
+      if (port && port !== inspector.port) {
+        inspector.port = port;
+        console.log(`Updated debugger port to ${port}`);
+      }
+      
+      // If already connected, disconnect first
+      if (inspector.connected && inspector.ws) {
+        inspector.ws.close();
+        inspector.connected = false;
+      }
+      
+      // Reset retry count and initialize
+      inspector.retryCount = 0;
+      inspector.initialize();
+      
+      return {
+        content: [{
+          type: "text",
+          text: `Attempting to connect to Node.js debugger on port ${inspector.port}...`
+        }]
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error initiating connection retry: ${err.message}`
+        }]
+      };
+    }
+  }
+);
+
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
 console.log("Inspector server ready...");
+console.log("MCP Debugger started. Connected to Node.js Inspector protocol.");
+console.log("The server will continuously try to connect to any Node.js debugging session on port 9229.");
+console.log("You can start a Node.js app with debugging enabled using: node --inspect yourapp.js");
