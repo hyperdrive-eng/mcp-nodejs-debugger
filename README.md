@@ -1,4 +1,4 @@
-# MCP Debugger
+# MCP NodeJS Debugger
 
 An MCP server that gives Claude Code access to NodeJS at runtime to help you debug: [`mcp-nodejs-debugger`](https://www.npmjs.com/package/mcp-nodejs-debugger).
 
