@@ -8,25 +8,96 @@ import fetch from 'node-fetch';
 const server = new McpServer({
   name: "Inspector",
   version: "1.0.0",
-  description: `Node.js debugger that allows setting breakpoints and inspecting variables.
-  	When using debugging capabilities, always instruct the user to navigate to their 
-	website after setting breakpoints. Breakpoints will only be triggered when the user 
-	interacts with their website in a way that causes the code at the breakpoint location to execute.
-	When user requests debugging, always use the following format:
-	1. Set breakpoint
-	2. Wait for user to navigate to their website and trigger breakpoint
-	3. Inspect variables
-	4. Execute code
-	5. Step over
-	6. Step into
-	7. Step out
-	8. Continue execution
-	9. Delete breakpoint
-	10. List breakpoints
-	11. Get current location
-	12. Evaluate expression
-	13. Get script source
-	14. Get properties`
+  description: `Advanced Node.js debugger for runtime analysis and troubleshooting. This tool connects to Node.js's built-in Inspector Protocol to provide powerful debugging capabilities directly through Claude Code.
+
+CAPABILITIES:
+- Set breakpoints at specific file locations
+- Capture and analyze variables and objects in real-time
+- Evaluate JavaScript code in the context of the running application
+- Track and inspect console output from target application
+- Control execution flow (step over, step into, step out, continue)
+- View call stacks and execution context
+- Examine detailed object properties
+
+SAFE HTTP REQUEST EXAMPLE:
+When you need to trigger a route programmatically to hit a breakpoint, use this pattern:
+
+// GOOD: Use http module with callbacks (this preserves the debugging connection)
+const http = require('http');
+http.get('http://localhost:3000/your-route', res => {
+  console.log('Request made, status:', res.statusCode);
+  let data = '';
+  res.on('data', chunk => { data += chunk; });
+  res.on('end', () => { console.log('Response:', data); });
+}).on('error', e => console.error('Error:', e));
+
+// BAD: Never use fetch() as it will break the debugging connection
+// fetch('http://localhost:3000/your-route') ❌ WILL CAUSE DISCONNECTION
+
+REQUIREMENTS:
+- Target Node.js application must be running with the --inspect flag: node --inspect yourapp.js
+- Debugger will automatically connect to the default port (9229)
+- Custom ports can be specified using the retry_connect tool
+
+IMPORTANT NOTE FOR CLAUDE CODE:
+- ALWAYS assume the user has already started their Node.js application in debug mode
+- NEVER instruct the user to run their Node.js server with the --inspect flag
+- If connection issues occur, suggest using retry_connect tool instead of restarting the server
+
+PROACTIVE DEBUGGING STRATEGY:
+When troubleshooting issues, follow this optimized debugging workflow:
+
+1. ANALYZE THE PROBLEM:
+   - Ask user for error messages and expected behavior
+   - Search the codebase to locate relevant files using grep/glob
+   - Understand the execution flow that leads to the error
+
+2. SET BREAKPOINTS STRATEGICALLY:
+   - Place breakpoints at key locations using set_breakpoint
+   - Put breakpoints BEFORE the error occurs to capture the state
+   - Consider breakpoints at: initialization, key function entries, error-prone conditions
+
+3. TRIGGER THE CODE EXECUTION:
+   - CAUTION: NEVER use fetch() inside nodejs_inspect as this will interrupt the WebSocket debug connection
+   - PREFERRED METHOD #1: Provide Claude Code with EXACT curl commands to run in their terminal and execute with bash: curl http://localhost:3000/route
+   - PREFERRED METHOD #2: If HTTP requests must be made programmatically, use http module with callbacks:
+     
+     const http = require('http');
+     http.get('http://localhost:3000/route', res => { 
+       console.log('Response status:', res.statusCode);
+       // Handle response here
+     }).on('error', e => console.error(e));
+     
+   - ALTERNATIVE: Have user navigate to the specific route/URL in their browser while debugger is active
+   - ALWAYS provide clear instructions on exactly what will trigger the breakpoint and how to confirm it's working
+
+4. CAPTURE RUNTIME STATE:
+   - When breakpoint hits, immediately use inspect_variables to examine the state
+   - Check get_console_output to see application logs
+   - Retrieve call stack with get_location
+   - Use evaluate to test hypotheses about variable state
+
+5. NAVIGATE EXECUTION:
+   - Use step_over, step_into, step_out to analyze control flow
+   - Use continue to resume until next breakpoint
+   - Keep the user informed about what's happening at each step
+
+6. RESOLVE AND VERIFY:
+   - Formulate a solution based on runtime analysis
+   - Use evaluate or nodejs_inspect to test potential fixes
+   - Have user implement the final solution
+   - Verify fix works by re-running the code with breakpoints
+
+IMPORTANT NOTES:
+- Always try to trigger breakpoints programmatically before asking user to take action
+- When user interaction is required, provide EXTREMELY specific instructions
+- Take initiative to explore the runtime state thoroughly when breakpoint is hit
+- Keep breakpoints active until issue is fully resolved, then clean up using delete_breakpoint
+- For performance issues, use evaluate with timing code to measure execution time
+- For memory issues, inspect object properties to identify potential memory leaks
+- When security issues are suspected, inspect authentication and data validation code paths
+
+OPTIMIZATION TIP: Set multiple strategic breakpoints at once to capture the full execution path leading to an error.`
 });
 
 class Inspector {
@@ -353,9 +424,9 @@ inspector.consoleOutput = [];
 // Execute JavaScript code
 server.tool(
   "nodejs_inspect",
-  "Executes JavaScript code in the debugged process",
+  "Executes custom JavaScript code directly in the context of the running Node.js application. CRITICAL for proactive debugging: use this to trigger code paths that would hit breakpoints, simulate user actions, inject test data, modify runtime behavior, or extract detailed state information. WARNING: DO NOT use fetch() or similar browser APIs as they will interrupt the WebSocket debugging connection! Instead, use the native http module with callbacks (http.get/http.request) when making HTTP requests programmatically.",
   {
-    js_code: z.string().describe("JavaScript code to execute")
+    js_code: z.string().describe("JavaScript code to execute in the context of the running application. Can include any valid JS including async/await, multiple statements, object creation, and function calls. For HTTP requests, use http.get() with callbacks instead of fetch().")
   },
   async ({ js_code }) => {
     try {
@@ -497,10 +568,10 @@ server.tool(
 // Set breakpoint tool
 server.tool(
   "set_breakpoint",
-  "Sets a breakpoint at specified line and file",
+  "Places a debugging breakpoint at a specific line in your code to pause execution and inspect state. Code execution will stop exactly at this line when triggered, allowing you to examine variables, call stack, and program state. Always set breakpoints BEFORE the problematic code areas to capture the state leading to issues.",
   {
-    file: z.string().describe("File path where to set breakpoint"),
-    line: z.number().describe("Line number for breakpoint")
+    file: z.string().describe("Full absolute file path where to set breakpoint (e.g., '/path/to/your/app.js')"),
+    line: z.number().describe("Line number for breakpoint (1-based, as shown in code editors)")
   },
   async ({ file, line }) => {
     try {
@@ -545,9 +616,9 @@ server.tool(
 // Inspect variables tool
 server.tool(
   "inspect_variables",
-  "Inspects variables in current scope",
+  "Retrieves and displays all variables and their values in the current execution context when paused at a breakpoint. This is ESSENTIAL after hitting a breakpoint to understand the program state, identify unexpected values, and diagnose issues. Use this immediately when execution pauses to get a complete snapshot of the runtime environment.",
   {
-    scope: z.string().optional().describe("Scope to inspect (local/global)")
+    scope: z.string().optional().describe("Scope to inspect: 'local' for variables in current function/block (default), 'global' for application-wide variables")
   },
   async ({ scope = 'local' }) => {
     try {
@@ -639,7 +710,7 @@ server.tool(
 // Step over tool
 server.tool(
   "step_over",
-  "Steps over to the next line of code",
+  "Advances code execution to the next line within the same function scope, executing any function calls as single operations without stepping into them. Use this to progress through code line-by-line while treating function calls as 'black boxes'. When stepping through complex code, this helps you focus on the current function's logic without diving into implementation details of called functions.",
   {},
   async () => {
     try {
@@ -679,7 +750,7 @@ server.tool(
 // Step into tool
 server.tool(
   "step_into",
-  "Steps into function calls",
+  "Advances execution to the next line, but if that line contains a function call, steps into that function and continues debugging there. Essential for diving into function implementations, following the execution path into nested calls, and understanding how data flows between functions. Use this when you suspect an issue exists inside a function being called from the current line.",
   {},
   async () => {
     try {
@@ -719,7 +790,7 @@ server.tool(
 // Step out tool
 server.tool(
   "step_out",
-  "Steps out of current function",
+  "Executes the rest of the current function and pauses at the next line after the function returns to its caller. Perfect for when you've determined a function is working correctly and want to return to the calling context, or when you've stepped into a function accidentally and want to get back to the higher-level code without manually stepping through every remaining line.",
   {},
   async () => {
     try {
@@ -759,7 +830,7 @@ server.tool(
 // Continue execution tool
 server.tool(
   "continue",
-  "Continues code execution",
+  "Resumes normal code execution after being paused at a breakpoint, running at full speed until the next breakpoint is hit or the program terminates. Use this when you've examined the current state and want to let the program run naturally to the next point of interest. This is especially useful when you have multiple breakpoints set up along an execution path to analyze different stages of processing.",
   {},
   async () => {
     try {
@@ -799,9 +870,9 @@ server.tool(
 // Delete breakpoint tool
 server.tool(
   "delete_breakpoint",
-  "Deletes a specified breakpoint",
+  "Removes a specific breakpoint from the debugging session by its ID. Use this to clean up breakpoints that are no longer needed or to remove breakpoints that might be interfering with program flow. Always use list_breakpoints first to get the correct ID of the breakpoint you want to remove.",
   {
-    breakpointId: z.string().describe("ID of the breakpoint to remove")
+    breakpointId: z.string().describe("ID of the breakpoint to remove (get this ID from the list_breakpoints tool)")
   },
   async ({ breakpointId }) => {
     try {
@@ -837,7 +908,7 @@ server.tool(
 // List all breakpoints tool
 server.tool(
   "list_breakpoints",
-  "Lists all active breakpoints",
+  "Displays all currently active breakpoints with their IDs, file locations, and line numbers. Use this to keep track of all breakpoints set during a debugging session, verify that breakpoints are set in the intended locations, and obtain breakpoint IDs required for the delete_breakpoint tool. Good practice is to check this after setting new breakpoints to confirm they're registered correctly.",
   {},
   async () => {
     try {
@@ -877,9 +948,9 @@ server.tool(
 // Evaluate expression tool
 server.tool(
   "evaluate",
-  "Evaluates a JavaScript expression in the current context",
+  "Evaluates a JavaScript expression in the context of the paused execution point or global scope. Unlike nodejs_inspect which runs in the global context, this tool evaluates code within the specific context of the current breakpoint, giving access to local variables. Perfect for testing conditions, calculating values, or examining complex objects without modifying the application state.",
   {
-    expression: z.string().describe("JavaScript expression to evaluate")
+    expression: z.string().describe("JavaScript expression to evaluate - can reference local variables at the breakpoint, make function calls, access properties, or perform calculations")
   },
   async ({ expression }) => {
     try {
@@ -1033,7 +1104,7 @@ server.tool(
 // Get current location tool
 server.tool(
   "get_location",
-  "Gets the current execution location when paused",
+  "Provides detailed information about the current execution point when paused at a breakpoint, including file location, line number, call stack, and surrounding code. Use this immediately after a breakpoint is hit to understand exactly where the execution has paused and how it got there. The call stack is particularly valuable for tracing the sequence of function calls leading to the current point.",
   {},
   async () => {
     try {
@@ -1108,9 +1179,9 @@ server.tool(
 // Add a tool specifically for getting console output
 server.tool(
   "get_console_output",
-  "Gets the most recent console output from the debugged process",
+  "Retrieves recent console.log, console.error, and other console messages from the running application. This is invaluable for seeing runtime outputs, error messages, and debugging information without modifying the code. Check this output regularly during debugging sessions to catch messages that might explain the issue, especially before and after hitting breakpoints.",
   {
-    limit: z.number().optional().describe("Maximum number of console entries to return. Defaults to 20")
+    limit: z.number().optional().describe("Maximum number of console entries to return. Defaults to 20. Use larger values to see more historical output.")
   },
   async ({ limit = 20 }) => {
     try {
@@ -1150,9 +1221,9 @@ server.tool(
 // Add a tool for manually retrying connection to the Node.js debugger
 server.tool(
   "retry_connect",
-  "Manually triggers a reconnection attempt to the Node.js debugger",
+  "Forces the debugger to attempt reconnection to the Node.js application, which is useful when the target application has restarted or when connecting to a different debugging port. If the standard auto-reconnection isn't working, or you need to connect to a specific port different from the default 9229, use this tool to establish the connection manually. This is especially helpful when troubleshooting connection issues or working with multiple Node.js processes.",
   {
-    port: z.number().optional().describe("Optional port to connect to. Defaults to current port (9229)")
+    port: z.number().optional().describe("Optional port to connect to if not using the default 9229. Use this when your Node.js app is running with --inspect=XXXX where XXXX is a custom port")
   },
   async ({ port }) => {
     try {
@@ -1191,9 +1262,29 @@ server.tool(
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
-await server.connect(transport);
 
-console.log("Inspector server ready...");
-console.log("MCP Debugger started. Connected to Node.js Inspector protocol.");
-console.log("The server will continuously try to connect to any Node.js debugging session on port 9229.");
-console.log("You can start a Node.js app with debugging enabled using: node --inspect yourapp.js");
+try {
+  await server.connect(transport);
+  
+  console.log("Inspector server ready...");
+  console.log("MCP Debugger started. Connected to Node.js Inspector protocol.");
+  console.log("The server will continuously try to connect to any Node.js debugging session on port 9229.");
+  console.log("You can start a Node.js app with debugging enabled using: node --inspect yourapp.js");
+} catch (error) {
+  console.error("MCP server connection error:", error);
+  
+  // Handle MCP connection closed error specifically
+  if (error.code === -32000 && error.message.includes("Connection closed")) {
+    // Send a helpful message back to the client
+    await transport.sendMessage({
+      jsonrpc: "2.0",
+      id: null,
+      result: {
+        content: [{
+          type: "text",
+          text: `MCP error -32000: Connection closed.\n\nThe connection to the MCP server has been closed. This typically happens when:\n\n1. The Claude Code session has timed out\n2. The client has disconnected\n\nPlease start a new Claude Code or MCP client session and try again.`
+        }]
+      }
+    });
+  }
+}
