@@ -7,7 +7,7 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
 1. Add to Claude Code:
 
     ```sh
-    $ claude mcp add nodejs-debugger npx @hyperdrive-eng/mcp-nodejs-debugger
+    claude mcp add nodejs-debugger npx @hyperdrive-eng/mcp-nodejs-debugger
     ```
 
 1. Start Claude Code
@@ -27,7 +27,7 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
 
     ```sh
     # In another terminal
-    $ node --inspect {your_file.js}
+    node --inspect {your_file.js}
     ```
 
 3. Ask Claude Code to debug your NodeJS server at runtime
@@ -68,7 +68,7 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
 1. Here is a buggy NodeJS server:
 
     ```
-    $ node --inspect index.js
+    node --inspect index.js
     
     Debugger listening on ws://127.0.0.1:9229/2862f5a2-8618-4516-8429-1248b397e9b4
     
