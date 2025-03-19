@@ -7,27 +7,27 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
 1. Add to Claude Code:
 
     ```sh
-    $ claude mcp add nodejs-debugger npx mcp-nodejs-debugger
+    claude mcp add nodejs-debugger npx @hyperdrive-eng/mcp-nodejs-debugger
     ```
 
 1. Start Claude Code
 
     ```sh
     claude
-    ╭────────────────────────────────────────────────────────────────────────────────╮
-    │ ✻ Welcome to Claude Code research preview!                                     │
-    │                                                                                │
-    │   /help for help                                                               │
-    │                                                                                │
-    │   Found 1 MCP server (use /mcp for status)                                     │
-    ╰────────────────────────────────────────────────────────────────────────────────╯
+    ╭───────────────────────────────────────────────────────╮
+    │ ✻ Welcome to Claude Code research preview!            │
+    │                                                       │
+    │   /help for help                                      │
+    │                                                       │
+    │   Found 1 MCP server (use /mcp for status)            │
+    ╰───────────────────────────────────────────────────────╯
     ```
 
 2. Run a NodeJS server in [debug mode](https://nodejs.org/en/learn/getting-started/debugging) (i.e. with the `--inspect` flat)
 
     ```sh
     # In another terminal
-    $ node --inspect {your_file.js}
+    node --inspect {your_file.js}
     ```
 
 3. Ask Claude Code to debug your NodeJS server at runtime
@@ -40,12 +40,35 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
       Please help me debug this error at runtime using the nodejs-debugger mcp.
     ```
 
+## Usage
+
+1. Add to Claude Code:
+
+    ```sh
+    claude mcp add nodejs-debugger npx mcp-nodejs-debugger
+    ```
+
+1. Verify connection
+
+    ```sh
+    > /mcp
+      ⎿  MCP Server Status
+
+         • nodejs-debugger: connected
+    ```
+
+1. Remove from Claude Code:
+
+    ```sh
+    claude remove nodejs-debugger
+    ```
+
 ## Example
 
 1. Here is a buggy NodeJS server:
 
     ```
-    $ node --inspect index.js
+    node --inspect index.js
     
     Debugger listening on ws://127.0.0.1:9229/2862f5a2-8618-4516-8429-1248b397e9b4
     
@@ -142,27 +165,4 @@ An MCP server that gives Claude Code access to NodeJS at runtime to help you deb
           - Update the connection string with real credentials
       
         Which option would you like to proceed with?
-    ```
-
-## Usage
-
-1. Add to Claude Code:
-
-    ```sh
-    claude mcp add nodejs-debugger npx mcp-nodejs-debugger
-    ```
-
-1. Verify connection
-
-    ```sh
-    > /mcp 
-      ⎿  MCP Server Status
-    
-         • nodejs-debugger: connected
-    ```
-
-1. Remove from Claude Code:
-
-    ```sh
-    claude remove nodejs-debugger
     ```
