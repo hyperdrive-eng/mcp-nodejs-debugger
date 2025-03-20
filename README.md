@@ -2,6 +2,13 @@
 
 An MCP server that gives Claude Code access to NodeJS at runtime to help you debug: [`mcp-nodejs-debugger`](https://www.npmjs.com/package/mcp-nodejs-debugger).
 
+## Demo
+
+
+https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
+
+
+
 ## Get started
 
 1. Add to Claude Code:
