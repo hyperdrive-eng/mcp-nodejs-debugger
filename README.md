@@ -1,17 +1,49 @@
-# MCP NodeJS Debugger
+# MCP Node.js Debugger
 
-An MCP server that gives Claude Code access to NodeJS at runtime to help you debug: [`mcp-nodejs-debugger`](https://www.npmjs.com/package/mcp-nodejs-debugger).
+An MCP server that gives Cursor or Claude Code access to Node.js at runtime to help you debug: [`@hyperdrive-eng/mcp-nodejs-debugger`](https://www.npmjs.com/package/@hyperdrive-eng/mcp-nodejs-debugger).
 
 ## Demo
 
+### Cursor
+
+https://github.com/user-attachments/assets/8ad5151d-6427-4d2b-a645-6f0bbe97f415
+
+### Claude Code
 
 https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
 
+## Quick start
 
+### Cursor
 
-## Get started
+1. Add to Cursor (`~/.cursor/mcp.json`)
 
-1. Add to Claude Code:
+    ![image](https://github.com/user-attachments/assets/132092ab-52d9-4790-84bb-9e9702603390)
+
+    ```diff
+    + {
+    +   "mcpServers": {
+    +   "nodejs-debugger": {
+    +      "command": "npx",
+    +       "args": ["@hyperdrive-eng/mcp-nodejs-debugger"]
+    +     }
+    +   }
+    + }
+    ```
+
+1. Run a Node.js server in [debug mode](https://nodejs.org/en/learn/getting-started/debugging) (i.e. with the `--inspect` flat)
+
+    ```sh
+    node --inspect {file.js}
+    ```
+    
+1. Ask Cursor to debug your Node.js server at runtime
+
+    ![image](https://github.com/user-attachments/assets/fa85982b-33ce-41df-ac90-58ce6a73c433)
+
+### Claude Code
+
+1. Add to Claude Code
 
     ```sh
     claude mcp add nodejs-debugger npx @hyperdrive-eng/mcp-nodejs-debugger
@@ -30,26 +62,28 @@ https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
     ╰───────────────────────────────────────────────────────╯
     ```
 
-2. Run a NodeJS server in [debug mode](https://nodejs.org/en/learn/getting-started/debugging) (i.e. with the `--inspect` flat)
+2. Run a Node.js server in [debug mode](https://nodejs.org/en/learn/getting-started/debugging) (i.e. with the `--inspect` flat)
 
     ```sh
     # In another terminal
-    node --inspect {your_file.js}
+    node --inspect {file.js}
     ```
 
-3. Ask Claude Code to debug your NodeJS server at runtime
+3. Ask Claude Code to debug your Node.js server at runtime
 
     ```sh
-    > I'm getting a runtime error in NodeJS. 
+    > I'm getting a runtime error in Node.js 
 
       {YOUR_RUNTIME_ERROR}
       
       Please help me debug this error at runtime using the nodejs-debugger mcp.
     ```
-
+    
 ## Usage
 
-1. Add to Claude Code:
+### Claude Code
+
+1. Add to Claude Code
 
     ```sh
     claude mcp add nodejs-debugger npx mcp-nodejs-debugger
@@ -64,15 +98,71 @@ https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
          • nodejs-debugger: connected
     ```
 
-1. Remove from Claude Code:
+1. Remove from Claude Code
 
     ```sh
     claude remove nodejs-debugger
     ```
 
+### Cursor
+
+1. Add to Cursor (`~/.cursor/mcp.json`)
+
+    ```diff
+    + {
+    +   "mcpServers": {
+    +   "nodejs-debugger": {
+    +      "command": "npx",
+    +       "args": ["@hyperdrive-eng/mcp-nodejs-debugger"]
+    +     }
+    +   }
+    + }
+    ```
+
+1. Verify connection:
+
+    ![image](https://github.com/user-attachments/assets/132092ab-52d9-4790-84bb-9e9702603390)
+
+1. Remove from Cursor (`~/.cursor/mcp.json`):
+
+    ```diff
+    - {
+    -   "mcpServers": {
+    -   "nodejs-debugger": {
+    -      "command": "npx",
+    -       "args": ["@hyperdrive-eng/mcp-nodejs-debugger"]
+    -     }
+    -   }
+    - }
+    ```
+
 ## Example
 
-1. Here is a buggy NodeJS server:
+### Cursor
+
+1. Here is a simple Node.js app ([github.com/mdn/express-locallibrary-tutorial](https://github.com/mdn/express-locallibrary-tutorial))
+
+    ```sh
+    node --inspect ./bin/www
+    ```
+
+1. Ask Cursor to set a breakpoint to capture the request params when you create a new book.
+
+    ![image](https://github.com/user-attachments/assets/fa85982b-33ce-41df-ac90-58ce6a73c433)
+
+    ![image](https://github.com/user-attachments/assets/d24b3423-b7c3-4268-ab86-732371aa047c)
+
+2. Create a book at <localhost:3000/catalog/book/create>
+
+    ![image](https://github.com/user-attachments/assets/165cb026-7767-417d-a52e-2423e5e5728e)
+
+1. Watch Cursor capture the request at runtime
+
+    ![image](https://github.com/user-attachments/assets/a7204504-7441-4592-9758-0397086ba724)
+
+### Claude Code
+
+1. Here is a buggy Node.js server:
 
     ```
     node --inspect index.js
@@ -107,7 +197,7 @@ https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
     }
     ```
 
-1. Claude Code debugs the NodeJS server at runtime:
+1. Claude Code debugs the Node.js server at runtime:
 
     ```sh    
     > I'm getting a runtime error connecting to mongoose. Please help me debug by checking the value of 
