@@ -6,7 +6,7 @@ An MCP server that gives Cursor or Claude Code access to Node.js at runtime to h
 
 ### Cursor
 
-https://github.com/user-attachments/assets/8ad5151d-6427-4d2b-a645-6f0bbe97f415
+https://github.com/user-attachments/assets/c193a17e-b0e6-4c51-82aa-7f3f0de17e1a
 
 ### Claude Code
 
@@ -140,23 +140,23 @@ https://github.com/user-attachments/assets/adb7321b-3a6a-459b-a5c9-df365710d4d8
 
 ### Cursor
 
-1. Here is a simple Node.js app ([github.com/mdn/express-locallibrary-tutorial](https://github.com/mdn/express-locallibrary-tutorial))
+1. Run this simple Node.js app: [github.com/mdn/express-locallibrary-tutorial](https://github.com/mdn/express-locallibrary-tutorial):
 
     ```sh
     node --inspect ./bin/www
     ```
 
-1. Ask Cursor to set a breakpoint to capture the request params when you create a new book.
+1. Ask Cursor to set a breakpoint
 
     ![image](https://github.com/user-attachments/assets/fa85982b-33ce-41df-ac90-58ce6a73c433)
 
     ![image](https://github.com/user-attachments/assets/d24b3423-b7c3-4268-ab86-732371aa047c)
 
-2. Create a book at <localhost:3000/catalog/book/create>
+2. Create a book at [`localhost:3000/catalog/book/create`](http://localhost:3000/catalog/book/create)
 
     ![image](https://github.com/user-attachments/assets/165cb026-7767-417d-a52e-2423e5e5728e)
 
-1. Watch Cursor capture the request at runtime
+1. Watch Cursor capture runtime state
 
     ![image](https://github.com/user-attachments/assets/a7204504-7441-4592-9758-0397086ba724)
 
