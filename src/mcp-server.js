@@ -120,7 +120,8 @@ class Inspector {
 	}
 	
 	async enableDebugger() {
-		if (!this.debuggerEnabled && this.connected) {
+    try {
+      if (!this.debuggerEnabled && this.connected) {
 
 				await this.send('Debugger.enable', {});
 				this.debuggerEnabled = true;
@@ -130,7 +131,11 @@ class Inspector {
 				
 				// Also activate possible domains we'll need
 				await this.send('Runtime.runIfWaitingForDebugger', {});
-		}
+			}
+		} catch (error) {
+			this.scheduleRetry();
+    }
+		
 	}
 	
 	handleEvent(event) {
