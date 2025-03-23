@@ -4,10 +4,14 @@ import { z } from "zod";
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
 
+// Disable console output for MCP compatibility
+console.log = function() {};
+console.error = function() {};
+
 // Create an MCP server
 const server = new McpServer({
   name: "NodeJS Debugger",
-  version: "0.2.0",
+  version: "0.2.2",
   description: `Advanced Node.js debugger for runtime analysis and troubleshooting. This tool connects to Node.js's built-in Inspector Protocol to provide powerful debugging capabilities directly through Claude Code.
 
     DEBUGGING STRATEGY:
@@ -54,28 +58,23 @@ class Inspector {
 			const debuggerUrl = data[0]?.webSocketDebuggerUrl;
 			
 			if (!debuggerUrl) {
-				console.error('No WebSocket debugger URL found');
 				this.scheduleRetry();
 				return;
 			}
 			
-			console.log(`Connecting to debugger at: ${debuggerUrl}`);
 			this.ws = new WebSocket(debuggerUrl);
 			
 			this.ws.on('open', () => {
-				console.log('WebSocket connection established');
 				this.connected = true;
 				this.retryCount = 0;
 				this.enableDebugger();
 			});
 			
 			this.ws.on('error', (error) => {
-				console.error('WebSocket error:', error.message);
 				this.scheduleRetry();
 			});
 			
 			this.ws.on('close', () => {
-				console.log('WebSocket connection closed');
 				this.connected = false;
 				this.scheduleRetry();
 			});
@@ -102,7 +101,6 @@ class Inspector {
 				}
 			});
 		} catch (error) {
-			console.error('Error initializing inspector:', error.message);
 			this.scheduleRetry();
 		}
 	}
@@ -112,24 +110,12 @@ class Inspector {
 		if (this.retryCount < this.retryOptions.maxRetries || this.continuousRetryEnabled) {
 			this.retryCount++;
 			
-			// If we're in continuous retry mode and have exceeded the initial retry count
-			if (this.continuousRetryEnabled && this.retryCount > this.retryOptions.maxRetries) {
-				// Only log every 10 attempts to avoid flooding the console
-				if (this.retryCount % 10 === 0) {
-					console.log(`Waiting for debugger connection... (retry ${this.retryCount})`);
-				}
-			} else {
-				console.log(`Retrying connection (${this.retryCount}/${this.retryOptions.maxRetries})...`);
-			}
-			
 			// Use a longer interval for continuous retries to reduce resource usage
 			const interval = this.continuousRetryEnabled && this.retryCount > this.retryOptions.maxRetries
 				? Math.min(this.retryOptions.retryInterval * 5, 10000) // Max 10 seconds between retries
 				: this.retryOptions.retryInterval;
 				
 			setTimeout(() => this.initialize(), interval);
-		} else {
-			console.error(`Failed to connect after ${this.retryOptions.maxRetries} attempts`);
 		}
 	}
 	
@@ -137,7 +123,6 @@ class Inspector {
 		if (!this.debuggerEnabled && this.connected) {
 			try {
 				await this.send('Debugger.enable', {});
-				console.log('Debugger enabled');
 				this.debuggerEnabled = true;
 				
 				// Setup event listeners
@@ -145,20 +130,16 @@ class Inspector {
 				
 				// Also activate possible domains we'll need
 				await this.send('Runtime.runIfWaitingForDebugger', {});
-			} catch (err) {
-				console.error('Failed to enable debugger:', err);
 			}
 		}
 	}
 	
 	handleEvent(event) {
-		// console.log('Event received:', event.method, event.params);
 		
 		switch (event.method) {
 			case 'Debugger.paused':
 				this.paused = true;
 				this.currentCallFrames = event.params.callFrames;
-				console.log('Execution paused at breakpoint');
 				
 				// Notify any registered callbacks for pause events
 				if (this.callbackHandlers.has('paused')) {
@@ -170,7 +151,6 @@ class Inspector {
 			case 'Debugger.resumed':
 				this.paused = false;
 				this.currentCallFrames = [];
-				console.log('Execution resumed');
 				
 				// Notify any registered callbacks for resume events
 				if (this.callbackHandlers.has('resumed')) {
@@ -184,9 +164,6 @@ class Inspector {
 				break;
 				
 			case 'Runtime.exceptionThrown':
-				console.log('Exception thrown:', 
-					event.params.exceptionDetails.text,
-					event.params.exceptionDetails.exception?.description || '');
 				break;
 				
 			case 'Runtime.consoleAPICalled':
@@ -224,7 +201,6 @@ class Inspector {
 					this.consoleOutput.shift();
 				}
 				
-				console.log(`[Console.${event.params.type}]`, args);
 				break;
 		}
 	}
@@ -299,7 +275,6 @@ class Inspector {
 			});
 			return response.scriptSource;
 		} catch (err) {
-			console.error('Error getting script source:', err);
 			return null;
 		}
 	}
@@ -320,7 +295,6 @@ class Inspector {
 				generatePreview: true
 			});
 		} catch (err) {
-			console.error('Error evaluating expression:', err);
 			throw err;
 		}
 	}
@@ -334,7 +308,6 @@ class Inspector {
 				generatePreview: true
 			});
 		} catch (err) {
-			console.error('Error getting properties:', err);
 			throw err;
 		}
 	}
@@ -372,7 +345,6 @@ server.tool(
         try {
           ${js_code}
         } catch (e) {
-          console.error('Execution error:', e);
           e;  // Return the error
         }
       `;
@@ -896,7 +868,6 @@ server.tool(
         try {
           ${expression}
         } catch (e) {
-          console.error('Evaluation error:', e);
           e;  // Return the error
         }
       `;
@@ -1159,7 +1130,6 @@ server.tool(
       // If a new port is specified, update the inspector's port
       if (port && port !== inspector.port) {
         inspector.port = port;
-        console.log(`Updated debugger port to ${port}`);
       }
       
       // If already connected, disconnect first
@@ -1192,8 +1162,3 @@ server.tool(
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
 await server.connect(transport);
-
-console.log("Inspector server ready...");
-console.log("MCP Debugger started. Connected to Node.js Inspector protocol.");
-console.log("The server will continuously try to connect to any Node.js debugging session on port 9229.");
-console.log("You can start a Node.js app with debugging enabled using: node --inspect yourapp.js");
