@@ -135,7 +135,6 @@ class Inspector {
 		} catch (error) {
 			this.scheduleRetry();
     }
-		
 	}
 	
 	handleEvent(event) {
