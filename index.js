@@ -5,6 +5,3 @@
 
 // Import and run the MCP server
 import './src/mcp-server.js';
-
-// The server is started in the imported file
-console.log('MCP Debugger started. Connected to Node.js Inspector protocol.');
